@@ -1,7 +1,7 @@
 // 
 // tsh - A tiny shell program with job control
 // 
-// Patryk Wisniewski
+// Patryk Wisniewski & Seok Song
 //
 
 using namespace std;
@@ -253,46 +253,52 @@ int builtin_cmd(char **argv)
 //
 void do_bgfg(char **argv) 
 {
-  struct job_t *jobp=NULL;
+    struct job_t *jobp=NULL;
     
-  /* Ignore command if no argument */
-  if (argv[1] == NULL) {
-    printf("%s command requires PID or %%jobid argument\n", argv[0]);
-    return;
-  }
+    /* Ignore command if no argument */
+    if (argv[1] == NULL) 
+    {
+        printf("%s command requires PID or %%jobid argument\n", argv[0]);
+        return;
+    }
     
-  /* Parse the required PID or %JID arg */
-  if (isdigit(argv[1][0])) {
-    pid_t pid = atoi(argv[1]);
-    if (!(jobp = getjobpid(jobs, pid))) {
-      printf("(%d): No such process\n", pid);
-      return;
+    /* Parse the required PID or %JID arg */
+    if (isdigit(argv[1][0])) 
+    {
+        pid_t pid = atoi(argv[1]);
+        if (!(jobp = getjobpid(jobs, pid))) 
+        {
+            printf("(%d): No such process\n", pid);
+            return;
+        }
     }
-  }
-  else if (argv[1][0] == '%') {
-    int jid = atoi(&argv[1][1]);
-    if (!(jobp = getjobjid(jobs, jid))) {
-      printf("%s: No such job\n", argv[1]);
-      return;
+    else if (argv[1][0] == '%') 
+    {
+        int jid = atoi(&argv[1][1]);
+        if (!(jobp = getjobjid(jobs, jid))) 
+        {
+            printf("%s: No such job\n", argv[1]);
+            return;
+        }
+    }	    
+    else 
+    {
+        printf("%s: argument must be a PID or %%jobid\n", argv[0]);
+        return;
     }
-  }	    
-  else {
-    printf("%s: argument must be a PID or %%jobid\n", argv[0]);
+
+    //
+    // You need to complete rest. At this point,
+    // the variable 'jobp' is the job pointer
+    // for the job ID specified as an argument.
+    //
+    // Your actions will depend on the specified command
+    // so we've converted argv[0] to a string (cmd) for
+    // your benefit.
+    //
+    string cmd(argv[0]);
+
     return;
-  }
-
-  //
-  // You need to complete rest. At this point,
-  // the variable 'jobp' is the job pointer
-  // for the job ID specified as an argument.
-  //
-  // Your actions will depend on the specified command
-  // so we've converted argv[0] to a string (cmd) for
-  // your benefit.
-  //
-  string cmd(argv[0]);
-
-  return;
 }
 
 /////////////////////////////////////////////////////////////////////////////

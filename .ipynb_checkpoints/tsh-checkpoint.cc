@@ -334,7 +334,12 @@ void sigchld_handler(int sig)
 //
 void sigint_handler(int sig) 
 {
-  return;
+   pid_t current_job = fgpid(jobs); //get the current job
+    
+    if(current_job != 0){ //Check to see if there are jobs to even kill 
+        kill(current_job, sig); //call the kill command with the current job and the signal (clt-c)
+    }
+    return;
 }
 
 /////////////////////////////////////////////////////////////////////////////

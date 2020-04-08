@@ -155,34 +155,61 @@ void eval(char *cmdline)
     // for the execve() routine, which you'll need to
     // use below to launch a process.
     //
-    char *argv[MAXARGS];
+    char *argv[MAXARGS]; /* Argument list execve() */
+    char buf[MAXLINE]; /* Holds modified command line */
+    int bg; /* Should the job run in bg or fg? */
+    pid_t pid; /* Process id */
+
+    sigset_t mask, prev_mask;
     
-    //
-    // The 'bg' variable is TRUE if the job should run
-    // in background mode or FALSE if it should run in FG
-    //
-    int bg = parseline(cmdline, argv);
-    pid_t pid;
-    if (argv[0] == NULL)  
-        return;   /* ignore empty lines */
+    strcpy(buf, cmdline);
+    bg = parseline(buf, argv);
     
-    if(builtin_cmd(argv) == 1)
+    if (argv[0] == NULL)
     {
-        sigset_t mask, prev_mask;
+        return; /* Ignore empty lines */
+    }
+
+    if (!builtin_cmd(argv)) 
+    {
         sigemptyset(&mask);
-        sigaddset(&mask, SIGINT);
-    
+        sigaddset(&mask, SIGCHLD);
+        /* Block SIGINT and save previous blocked set */
         sigprocmask(SIG_BLOCK, &mask, &prev_mask);
         
-        pid = fork();
-        
-        if(bg == false)
-        {
-            addjob(jobs, pid, FG, cmdline);
+        if ((pid = fork()) == 0) 
+        { /* Child runs user job */
+            printf("Excuted Child\n");
             sigprocmask(SIG_SETMASK, &prev_mask, NULL);
+            
+            if (execve(argv[0], argv, environ) < 0) 
+            {
+                printf("%s: Command not found.\n", argv[0]);
+                exit(0);
+            }
+        }
+
+        /* Parent waits for foreground job to terminate */
+        if (!bg) 
+        {
+            //printf("Excuted FG\n");
+            sigprocmask(SIG_SETMASK, &prev_mask, NULL);
+            
+            int status;
+            if (waitpid(pid, &status, 0) < 0)
+            {
+                unix_error("waitfg: waitpid error");
+            }
+        }
+        else
+        {
+            //printf("Excuted BG\n");
+            addjob(jobs, pid, BG, cmdline);
+            sigprocmask(SIG_SETMASK, &prev_mask, NULL);
+            printf("[%d] (%d) %s", pid2jid(pid), pid, cmdline);
         }
     }
-    
+            
     return;
 }
 

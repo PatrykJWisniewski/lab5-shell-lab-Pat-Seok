@@ -181,6 +181,7 @@ void eval(char *cmdline)
         { /* Child runs user job */
             printf("Excuted Child\n");
             sigprocmask(SIG_SETMASK, &prev_mask, NULL);
+            setpgid (0, 0);
             
             if (execve(argv[0], argv, environ) < 0) 
             {
@@ -193,13 +194,10 @@ void eval(char *cmdline)
         if (!bg) 
         {
             //printf("Excuted FG\n");
+            addjob(jobs, pid, FG, cmdline);
             sigprocmask(SIG_SETMASK, &prev_mask, NULL);
             
-            int status;
-            if (waitpid(pid, &status, 0) < 0)
-            {
-                unix_error("waitfg: waitpid error");
-            }
+            waitfg(pid);
         }
         else
         {
@@ -307,6 +305,13 @@ void do_bgfg(char **argv)
 //
 void waitfg(pid_t pid)
 {
+    /*struct job_t *job = getjobpid(jobs, pid);
+    
+    while(job->state == FG)
+    {
+        sleep(1);
+    }*/
+    
     while(fgpid(jobs) == pid){
         sleep(1);
     }
@@ -329,7 +334,15 @@ void waitfg(pid_t pid)
 //
 void sigchld_handler(int sig) 
 {
-  return;
+    pid_t pid;
+    int status;
+    
+    while((pid = waitpid(-1, &status, WNOHANG)) > 0)
+    {
+        deletejob(jobs, pid);
+    }
+    
+    return;
 }
 
 /////////////////////////////////////////////////////////////////////////////
@@ -343,7 +356,8 @@ void sigint_handler(int sig)
    pid_t current_job = fgpid(jobs); //get the current job
     
     if(current_job != 0){ //Check to see if there are jobs to even kill 
-        kill(current_job, sig); //call the kill command with the current job and the signal (clt-c)
+        kill(-current_job, sig); //call the kill command with the current job and the signal (clt-c)
+        printf("Job [%d] (%d) terminated by signal %d\n", pid2jid(current_job), current_job, sig);
     }
     return;
 }

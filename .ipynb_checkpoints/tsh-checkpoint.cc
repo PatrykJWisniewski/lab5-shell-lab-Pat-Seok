@@ -179,7 +179,7 @@ void eval(char *cmdline)
         
         if ((pid = fork()) == 0) 
         { /* Child runs user job */
-            printf("Excuted Child\n");
+            //printf("Excuted Child\n");
             sigprocmask(SIG_SETMASK, &prev_mask, NULL);
             setpgid (0, 0);
             
@@ -337,9 +337,23 @@ void sigchld_handler(int sig)
     pid_t pid;
     int status;
     
-    while((pid = waitpid(-1, &status, WNOHANG)) > 0)
-    {
-        deletejob(jobs, pid);
+    while((pid = waitpid(-1, &status, WNOHANG | WUNTRACED)) > 0)
+    {       
+        if(WIFEXITED(status))
+        {
+            deletejob(jobs, pid);
+        }
+        
+        if(WIFSIGNALED(status))
+        {
+            deletejob(jobs, pid);
+        }
+        
+        if(WIFSTOPPED(status))
+        {
+            job_t *job = getjobpid(jobs, pid);
+            job->state = ST;
+        }
     }
     
     return;

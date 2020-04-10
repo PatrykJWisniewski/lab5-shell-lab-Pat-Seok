@@ -296,6 +296,21 @@ void do_bgfg(char **argv)
     //
     string cmd(argv[0]);
 
+     if(jobp) //Check to see if the job pointer is the pointer for the argument job 
+    {
+        
+        if(cmd=="bg") //check to see if the command is a background job
+        {
+            jobp -> state = BG; //set the state to background
+            printf("[%d] (%d) %s", jobp -> jid, jobp -> pid, jobp -> cmdline);
+        }
+        else if (cmd == "fg") //if statement for if the job is currently a background job but we want it to be a foreground job
+        {
+            kill(-(jobp -> pid),SIGCONT); 
+            jobp -> state = FG; //set the state to foreground
+            waitfg(jobp -> pid); //call waitfg so we can block the proccess till its no longer a foreground job 
+        }
+    }
     return;
 }
 
@@ -338,22 +353,27 @@ void sigchld_handler(int sig)
     int status;
     
     while((pid = waitpid(-1, &status, WNOHANG | WUNTRACED)) > 0)
-    {       
-        if(WIFEXITED(status))
-        {
-            deletejob(jobs, pid);
-        }
-        
+    {     
         if(WIFSIGNALED(status))
         {
+            printf("Job [%d] (%d) terminated by signal %d\n", pid2jid(pid), pid, WTERMSIG(status));
             deletejob(jobs, pid);
         }
         
         if(WIFSTOPPED(status))
         {
             job_t *job = getjobpid(jobs, pid);
-            job->state = ST;
+            job -> state = ST;
+            printf("Job [%d] (%d) stopped by signal %d\n", pid2jid(pid), pid, WSTOPSIG(status));
         }
+        
+        if(WIFEXITED(status))
+        {
+            deletejob(jobs, pid);
+
+        }
+        
+        
     }
     
     return;
@@ -371,7 +391,7 @@ void sigint_handler(int sig)
     
     if(current_job != 0){ //Check to see if there are jobs to even kill 
         kill(-current_job, sig); //call the kill command with the current job and the signal (clt-c)
-        printf("Job [%d] (%d) terminated by signal %d\n", pid2jid(current_job), current_job, sig);
+//         printf("Job [%d] (%d) terminated by signal %d\n", pid2jid(current_job), current_job, sig);
     }
     return;
 }
@@ -388,7 +408,7 @@ void sigtstp_handler(int sig)
     
     if(current_job != 0){ //Check to see if there are jobs to even kill 
         kill(-current_job, sig); //call the kill command with the current job and the signal (clt-c)
-        printf("Job [%d] (%d) stopped by signal %d\n", pid2jid(current_job), current_job, sig);
+//         printf("Job [%d] (%d) stopped by signal %d\n", pid2jid(current_job), current_job, sig);
     }
     return;
 }
